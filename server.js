@@ -279,10 +279,32 @@ io.on("connection", (socket) => {
 				seqnoA: new BN(latestState.client_sequence_number + 1),
 				seqnoB: new BN(0)
 			};
-
-			if (!(await channel.verifyState(expectedState, newState.client_signature))) {
-				console.log('Signature did not match with the expected state.');
-				return;
+			
+			boolean channelClosed = false;
+			
+			if (latestState.client_balance == 0) {
+				if (!(await channel.verifyClose(expectedState, newState.client_signature))) {
+					console.log('Signature did not match with the expected state.');
+					return;
+				}
+				
+				const fromWallet = channel.fromWallet({
+					wallet: walletA,
+					secretKey: keyPairA.secretKey
+				});
+				
+				await fromWallet.close({
+					...expectedState,
+					hisSignature: newState.client_signature
+				}).send(toNano('0.05'));
+				
+				channelClosed = true;
+			}
+			else {
+				if (!(await channel.verifyState(expectedState, newState.client_signature))) {
+					console.log('Signature did not match with the expected state.');
+					return;
+				}
 			}
 
 			clients[clientPublicKey].latestState = newState;
@@ -294,6 +316,10 @@ io.on("connection", (socket) => {
 				socket.emit("secret", previousSecret);
 			} else {
 				socket.emit("secret", currentSecret);
+			}
+			
+			if (channelClosed) {
+				clients[clientPublicKey] = null;
 			}
 		}
 
