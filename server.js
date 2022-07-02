@@ -320,6 +320,8 @@ io.on("connection", (socket) => {
 			
 			if (channelClosed) {
 				clients[clientPublicKey] = null;
+				
+				socket.emit("latestState", null);
 			}
 		}
 
