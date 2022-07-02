@@ -60,9 +60,9 @@ app.get('/getVideo', function(req, res) {
 
 	const progress = now % duration;
 
-	var seek = 0;
-	var index = 0;
-	var indexDuration = index < 9 ? partDuration : lastPartDuration;
+	let seek = 0;
+	let index = 0;
+	let indexDuration = index < 9 ? partDuration : lastPartDuration;
 
 	while (progress > seek + indexDuration) {
 		index++;
@@ -161,14 +161,14 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("latestState", (...args) => {
-		var clientPublicKey = args[0];
+		var clientPublicKey = new Uint8Array(args[0]);
 		socket.emit("latestState", clients[clientPublicKey] == null ? null : clients[clientPublicKey].latestState);
 	});
 
 	socket.on("newChannel", (...args) => {
 		const process = async () => {
 			var latestState = args[0];
-			var clientPublicKey = latestState.client_public_key;
+			var clientPublicKey = new Uint8Array(latestState.client_public_key);
 
 			if (latestState.server_balance != 0.01) {
 				console.log('invalid initial balance for server.');
@@ -227,7 +227,7 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("play", (...args) => {
-		var clientPublicKey = args[0];
+		var clientPublicKey = new Uint8Array(args[0]);
 
 		if (clients[clientPublicKey] == null) {
 			console.log('Play called but client not found.');
@@ -244,14 +244,14 @@ io.on("connection", (socket) => {
 	socket.on("pay", (...args) => {
 		const process = async () => {
 			var newState = args[0];
-			var clientPublicKey = newState.client_public_key;
+			var clientPublicKey = new Uint8Array(newState.client_public_key);
 
-			if (clients[client_public_key] == null) {
+			if (clients[clientPublicKey] == null) {
 				console.log('Payment received for a client that doesn\'t exist.');
 				return;
 			}
 
-			var latestState = clients[client_public_key].latestState;
+			var latestState = clients[clientPublicKey].latestState;
 
 			if (latestState == null) {
 				console.log('Payment recived but state does not exist');
