@@ -82,8 +82,16 @@ app.get('/getVideo', function(req, res) {
 			}
 		}
 	}
-	else {
+	else if (secret == currentSecret) {
 		// Current index is fine
+	}
+	else {
+		console.log('Wrong secret!');
+		const head = {
+			'Content-Type': 'plain/text',
+		}
+		res.writeHead(400, head)
+		return;
 	}
 	
 	console.log('index = ', index);
