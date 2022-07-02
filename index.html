@@ -1,0 +1,93 @@
+<html>
+  <head>
+		<title>Video stream sample</title>
+
+		<style>
+			audio::-webkit-media-controls-timeline,
+			video::-webkit-media-controls-timeline {
+			display: none;
+			}
+			audio::-webkit-media-controls,
+			video::-webkit-media-controls {
+			display: none;
+			}
+		</style>
+		
+		<script src="https://cdn.socket.io/4.5.0/socket.io.min.js" integrity="sha384-7EyYLQZgWBi67fBtVxw60/OWl1kjsfrPFcaU0pp0nAh+i8FD068QogUvg85Ewy1k" crossorigin="anonymous"></script>
+	
+		<script>
+			var serverPublicKey = null;
+			var latestState = null;
+		</script>
+	
+		<script>
+			var index = 0;
+			var paused = false;
+		
+			function play() {
+				var myvid = document.getElementById('videoPlayer')
+				
+				if (!paused) {
+					myvid.src = "http://localhost:3000/getVideo?index=" + index;
+				}
+				
+				myvid.play();
+			}
+			
+			function stop() {
+				paused = true;
+				document.getElementById("videoPlayer").pause();
+			}
+			
+		</script>
+
+  </head>
+  
+  <body>
+	<div>
+		<video id="videoPlayer" controls> 
+		  <source type="video/mp4">
+		</video>
+	</div>
+	<button onclick="play()">Play</button>
+	<button onclick="stop()">Stop</button>
+	
+	<script>
+		var index = 0;
+	
+		var myvid = document.getElementById('videoPlayer');
+
+		myvid.addEventListener('ended', function(e) {
+			index++;
+			myvid.src = "http://localhost:3000/getVideo?index=" + index;
+			myvid.play();
+		});
+	</script>
+	
+	
+	<script>
+		const socket = io("http://localhost:3030");
+		
+		socket.on("connect", () => {
+			console.log('socket.io connected');
+			
+			socket.emit("publicKey");
+			socket.emit("latestState");
+		});
+		
+		socket.on("publicKey", (...args) => {
+			serverPublicKey = args[0];
+			console.log('publicKey: ', serverPublicKey);
+		});
+		
+		socket.on("latestState", (...args) => {
+			latestState = args[0];
+			console.log('latestState: ', latestState);
+		});
+	</script>
+	
+	
+	
+  </body>
+  
+</html>
