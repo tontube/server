@@ -155,7 +155,7 @@ io.on("connection", (socket) => {
 	console.log(socket.id);
 	
 	socket.on("publicKey", (...args) => {
-		socket.emit("publicKey", keyPairA.publicKey);
+		socket.emit("publicKey", keyPairA.publicKey, walletAddressA);
 	});
 	
 	socket.on("latestState", (...args) => {
