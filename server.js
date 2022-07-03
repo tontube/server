@@ -161,14 +161,27 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("latestState", (...args) => {
-		var clientPublicKey = new Uint8Array(args[0]);
+		let clientPublicKey = args[0];
+
+		let temp = Object.keys(clientPublicKey)
+		temp = temp.map(function(item) {
+			return parseInt(item, 10);
+		});
+		clientPublicKey= Uint8Array.from(temp);
+
 		socket.emit("latestState", clients[clientPublicKey] == null ? null : clients[clientPublicKey].latestState);
 	});
 
 	socket.on("newChannel", (...args) => {
 		const process = async () => {
-			var latestState = args[0];
-			var clientPublicKey = new Uint8Array(latestState.client_public_key);
+			let latestState = args[0];
+			let clientPublicKey = latestState.client_public_key;
+
+			let temp = Object.keys(clientPublicKey)
+			temp = temp.map(function(item) {
+				return parseInt(item, 10);
+			});
+			clientPublicKey= Uint8Array.from(temp);
 
 			if (latestState.server_balance != 0.01) {
 				console.log('invalid initial balance for server.');
@@ -196,6 +209,7 @@ io.on("connection", (socket) => {
 			});
 
 			const channelAddress = await channel.getAddress();
+			console.log(channelConfig)
 			if (channelAddress.toString(true, true, true) != latestState.channel_address) {
 				console.log('invalid channel address.');
 				return;
@@ -227,7 +241,13 @@ io.on("connection", (socket) => {
 	});
 
 	socket.on("play", (...args) => {
-		var clientPublicKey = new Uint8Array(args[0]);
+		var clientPublicKey = args[0];
+
+		let temp = Object.keys(clientPublicKey)
+		temp = temp.map(function(item) {
+			return parseInt(item, 10);
+		});
+		clientPublicKey= Uint8Array.from(temp);
 
 		if (clients[clientPublicKey] == null) {
 			console.log('Play called but client not found.');
@@ -243,15 +263,21 @@ io.on("connection", (socket) => {
 
 	socket.on("pay", (...args) => {
 		const process = async () => {
-			var newState = args[0];
-			var clientPublicKey = new Uint8Array(newState.client_public_key);
+			let newState = args[0];
+			let clientPublicKey = newState.client_public_key;
+
+			let temp = Object.keys(clientPublicKey)
+			temp = temp.map(function(item) {
+				return parseInt(item, 10);
+			});
+			clientPublicKey= Uint8Array.from(temp);
 
 			if (clients[clientPublicKey] == null) {
 				console.log('Payment received for a client that doesn\'t exist.');
 				return;
 			}
 
-			var latestState = clients[clientPublicKey].latestState;
+			let latestState = clients[clientPublicKey].latestState;
 
 			if (latestState == null) {
 				console.log('Payment recived but state does not exist');
@@ -279,25 +305,25 @@ io.on("connection", (socket) => {
 				seqnoA: new BN(latestState.client_sequence_number + 1),
 				seqnoB: new BN(0)
 			};
-			
-			boolean channelClosed = false;
-			
+
+			let channelClosed = false;
+
 			if (latestState.client_balance == 0) {
 				if (!(await channel.verifyClose(expectedState, newState.client_signature))) {
 					console.log('Signature did not match with the expected state.');
 					return;
 				}
-				
+
 				const fromWallet = channel.fromWallet({
 					wallet: walletA,
 					secretKey: keyPairA.secretKey
 				});
-				
+
 				await fromWallet.close({
 					...expectedState,
 					hisSignature: newState.client_signature
 				}).send(toNano('0.05'));
-				
+
 				channelClosed = true;
 			}
 			else {
@@ -317,10 +343,10 @@ io.on("connection", (socket) => {
 			} else {
 				socket.emit("secret", currentSecret);
 			}
-			
+
 			if (channelClosed) {
 				clients[clientPublicKey] = null;
-				
+
 				socket.emit("latestState", null);
 			}
 		}
