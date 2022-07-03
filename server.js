@@ -181,15 +181,14 @@ io.on("connection", (socket) => {
 
 			latestState.clientPublicKey = clientPublicKey;
 			latestState.client_wallet_address = new TonWeb.utils.Address(latestState.client_wallet_address);
-			latestState.client_signature = objToUint8(latestState.client_signature);
 
-			if (latestState.server_balance != 0.01) {
+			if (latestState.server_balance !== 0) {
 				console.log('invalid initial balance for server.');
 				return;
 			}
 
-			if (latestState.client_sequence_number != 1) {
-				console.log('First client sequence must be 1.');
+			if (latestState.client_sequence_number !== 0) {
+				console.log('First client sequence must be 0.');
 				return;
 			}
 
@@ -197,7 +196,7 @@ io.on("connection", (socket) => {
 				channelId: latestState.channel_id,
 				addressA: latestState.client_wallet_address,
 				addressB: walletAddressA,
-				initBalanceA: toNano(String((parseInt(parseFloat(latestState.client_balance) * 10000) + 100) / 10000)),
+				initBalanceA: toNano(String(latestState.client_balance)),
 				initBalanceB: toNano('0')
 			}
 
@@ -210,20 +209,8 @@ io.on("connection", (socket) => {
 
 			const channelAddress = await channel.getAddress();
 
-			if (channelAddress.toString(true, true, true) != latestState.channel_address) {
+			if (channelAddress.toString(true, true, true) !== latestState.channel_address) {
 				console.log('invalid channel address.');
-				return;
-			}
-
-			const expectedState = {
-				balanceA: toNano(String(latestState.client_balance)),
-				balanceB: toNano('0.01'),
-				seqnoA: new BN(1),
-				seqnoB: new BN(0)
-			};
-
-			if (!(await channel.verifyState(expectedState, latestState.client_signature))) {
-				console.log('Signature did not match with the expected state.');
 				return;
 			}
 
@@ -348,10 +335,12 @@ io.on("connection", (socket) => {
 			}
 
 			if (channelClosed) {
+				console.log('Client subscription ended. Sending "end" as latest state');
+
 				clients[clientPublicKey] = null;
 				delete clients[clientPublicKey];
 
-				socket.emit("latestState", null);
+				socket.emit("latestState", 'end');
 			}
 			else {
 				socket.emit("latestState", clients[clientPublicKey].latestState);
@@ -385,7 +374,7 @@ const duration = partDuration * 9 + lastPartDuration;
 const progress = now % duration;
 
 let seek = 0;
-let index = 0;
+var index = 0;
 let indexDuration = index < 9 ? partDuration : lastPartDuration;
 
 while (progress > seek + indexDuration) {
@@ -406,6 +395,11 @@ function updater() {
 	console.log('new secret: ' + currentSecret);
 
 	index++;
+
+	if (index === 10) {
+		index = 0;
+	}
+
 	let indexDuration = index < 9 ? partDuration : lastPartDuration;
 
 	setTimeout(updater, indexDuration * 1000);
