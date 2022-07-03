@@ -1,4 +1,4 @@
-const express = require('express')
+	const express = require('express')
 const fs = require('fs')
 const path = require('path')
 const app = express()
@@ -29,6 +29,13 @@ const init = async () => {
 
 init();
 
+function objToUint8(obj) {
+	let temp = Object.values(obj)
+	temp = temp.map(function(item) {
+		return parseInt(item, 10);
+	});
+	return Uint8Array.from(temp);
+}
 
 
 
@@ -157,17 +164,11 @@ io.on("connection", (socket) => {
 	console.log(socket.id);
 
 	socket.on("publicKey", (...args) => {
-		socket.emit("publicKey", keyPairA.publicKey, walletAddressA);
+		socket.emit("publicKey", keyPairA.publicKey, walletAddressA.toString(true, true, true));
 	});
 
 	socket.on("latestState", (...args) => {
-		let clientPublicKey = args[0];
-
-		let temp = Object.keys(clientPublicKey)
-		temp = temp.map(function(item) {
-			return parseInt(item, 10);
-		});
-		clientPublicKey= Uint8Array.from(temp);
+		let clientPublicKey = objToUint8(args[0]);
 
 		socket.emit("latestState", clients[clientPublicKey] == null ? null : clients[clientPublicKey].latestState);
 	});
@@ -175,13 +176,11 @@ io.on("connection", (socket) => {
 	socket.on("newChannel", (...args) => {
 		const process = async () => {
 			let latestState = args[0];
-			let clientPublicKey = latestState.client_public_key;
+			let clientPublicKey = objToUint8(latestState.client_public_key);
 
-			let temp = Object.keys(clientPublicKey)
-			temp = temp.map(function(item) {
-				return parseInt(item, 10);
-			});
-			clientPublicKey= Uint8Array.from(temp);
+			latestState.clientPublicKey = clientPublicKey;
+			latestState.client_wallet_address = new TonWeb.utils.Address(latestState.client_wallet_address);
+			latestState.client_signature = objToUint8(latestState.client_signature);
 
 			if (latestState.server_balance != 0.01) {
 				console.log('invalid initial balance for server.');
@@ -209,7 +208,7 @@ io.on("connection", (socket) => {
 			});
 
 			const channelAddress = await channel.getAddress();
-			console.log(channelConfig)
+
 			if (channelAddress.toString(true, true, true) != latestState.channel_address) {
 				console.log('invalid channel address.');
 				return;
@@ -235,19 +234,15 @@ io.on("connection", (socket) => {
 			clients[clientPublicKey].streaming = false;
 
 			socket.emit("latestState", latestState);
+
+			console.log("newChannel accepted. Latest state applied.")
 		}
 
 		process();
 	});
 
 	socket.on("play", (...args) => {
-		var clientPublicKey = args[0];
-
-		let temp = Object.keys(clientPublicKey)
-		temp = temp.map(function(item) {
-			return parseInt(item, 10);
-		});
-		clientPublicKey= Uint8Array.from(temp);
+		let clientPublicKey = objToUint8(args[0]);
 
 		if (clients[clientPublicKey] == null) {
 			console.log('Play called but client not found.');
@@ -264,13 +259,10 @@ io.on("connection", (socket) => {
 	socket.on("pay", (...args) => {
 		const process = async () => {
 			let newState = args[0];
-			let clientPublicKey = newState.client_public_key;
+			let clientPublicKey = objToUint8(newState.client_public_key);
 
-			let temp = Object.keys(clientPublicKey)
-			temp = temp.map(function(item) {
-				return parseInt(item, 10);
-			});
-			clientPublicKey= Uint8Array.from(temp);
+			newState.client_public_key = clientPublicKey;
+			newState.client_signature = objToUint8(newState.client_signature);
 
 			if (clients[clientPublicKey] == null) {
 				console.log('Payment received for a client that doesn\'t exist.');
@@ -286,7 +278,7 @@ io.on("connection", (socket) => {
 
 			const channelConfig = {
 				channelId: latestState.channel_id,
-				addressA: latestState.client_wallet_address,
+				addressA: new TonWeb.utils.Address(latestState.client_wallet_address),
 				addressB: walletAddressA,
 				initBalanceA: toNano(String((parseInt(parseFloat(latestState.client_balance) * 10000) + parseInt(parseFloat(latestState.server_balance) * 10000)) / 10000)),
 				initBalanceB: toNano('0')
@@ -306,9 +298,19 @@ io.on("connection", (socket) => {
 				seqnoB: new BN(0)
 			};
 
+			// console.log('initial a balance: ', String((parseInt(parseFloat(latestState.client_balance) * 10000) + parseInt(parseFloat(latestState.server_balance) * 10000)) / 10000));
+			// console.log('channel config: ', channelConfig);
+			// console.log('server public key: ', keyPairA.publicKey);
+			// console.log('client public key: ', clientPublicKey);
+			// console.log('expected balance A', String((parseInt(parseFloat(latestState.client_balance) * 10000) - 100) / 10000));
+			// console.log('expected balance B', String((parseInt(parseFloat(latestState.server_balance) * 10000) + 100) / 10000));
+			// console.log('expected sequence number: ', latestState.client_sequence_number + 1);
+			// console.log('expected state: ', expectedState);
+			// console.log('received new state: ', newState);
+
 			let channelClosed = false;
 
-			if (latestState.client_balance == 0) {
+			if (newState.client_balance == 0) {
 				if (!(await channel.verifyClose(expectedState, newState.client_signature))) {
 					console.log('Signature did not match with the expected state.');
 					return;
@@ -346,9 +348,15 @@ io.on("connection", (socket) => {
 
 			if (channelClosed) {
 				clients[clientPublicKey] = null;
+				delete clients[clientPublicKey];
 
 				socket.emit("latestState", null);
 			}
+			else {
+				socket.emit("latestState", clients[clientPublicKey].latestState);
+			}
+
+			console.log('payment received. Secret sent and state updated.')
 		}
 
 		process();
@@ -375,9 +383,9 @@ const duration = partDuration * 9 + lastPartDuration;
 
 const progress = now % duration;
 
-var seek = 0;
-var index = 0;
-var indexDuration = index < 9 ? partDuration : lastPartDuration;
+let seek = 0;
+let index = 0;
+let indexDuration = index < 9 ? partDuration : lastPartDuration;
 
 while (progress > seek + indexDuration) {
 	index++;
@@ -388,7 +396,7 @@ while (progress > seek + indexDuration) {
 previousSecret = String(Math.random());
 currentSecret = previousSecret;
 
-var nextTime = Math.max(seek + indexDuration - progress - 2, 0);
+let nextTime = Math.max(seek + indexDuration - progress - 2, 0);
 
 function updater() {
 	previousSecret = currentSecret;
@@ -397,14 +405,15 @@ function updater() {
 	console.log('new secret: ' + currentSecret);
 
 	index++;
-	var indexDuration = index < 9 ? partDuration : lastPartDuration;
+	let indexDuration = index < 9 ? partDuration : lastPartDuration;
 
 	setTimeout(updater, indexDuration * 1000);
 
 	for (clientPublicKey in clients) {
-		if (clients[clientPublicKey].streaming) {
+		if (clients[clientPublicKey] && clients[clientPublicKey].streaming) {
 			if (clients[clientPublicKey].pendingPayment || clients[clientPublicKey].socket == null) {
 				clients[clientPublicKey].streaming = false;
+				console.log('Streaming stopped. Pending payment: ', clients[clientPublicKey].pendingPayment);
 				continue;
 			}
 
