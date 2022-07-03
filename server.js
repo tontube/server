@@ -197,7 +197,7 @@ io.on("connection", (socket) => {
 				channelId: latestState.channel_id,
 				addressA: latestState.client_wallet_address,
 				addressB: walletAddressA,
-				initBalanceA: toNano(String(parseFloat(latestState.client_balance) + 0.01)),
+				initBalanceA: toNano(String((parseInt(parseFloat(latestState.client_balance) * 10000) + 100) / 10000)),
 				initBalanceB: toNano('0')
 			}
 
@@ -288,7 +288,7 @@ io.on("connection", (socket) => {
 				channelId: latestState.channel_id,
 				addressA: latestState.client_wallet_address,
 				addressB: walletAddressA,
-				initBalanceA: toNano(String(parseFloat(latestState.client_balance) + parseFloat(latestState.server_balance))),
+				initBalanceA: toNano(String((parseInt(parseFloat(latestState.client_balance) * 10000) + parseInt(parseFloat(latestState.server_balance) * 10000)) / 10000)),
 				initBalanceB: toNano('0')
 			}
 
@@ -300,8 +300,8 @@ io.on("connection", (socket) => {
 			});
 
 			const expectedState = {
-				balanceA: toNano(String(parseFloat(latestState.client_balance) - 0.01)),
-				balanceB: toNano(String(parseFloat(latestState.server_balance) + 0.01)),
+				balanceA: toNano(String((parseInt(parseFloat(latestState.client_balance) * 10000) - 100) / 10000)),
+				balanceB: toNano(String((parseInt(parseFloat(latestState.server_balance) * 10000) + 100) / 10000)),
 				seqnoA: new BN(latestState.client_sequence_number + 1),
 				seqnoB: new BN(0)
 			};
