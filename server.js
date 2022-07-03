@@ -97,7 +97,7 @@ app.get('/getVideo', function(req, res) {
 		const head = {
 			'Content-Type': 'plain/text',
 		}
-		res.writeHead(400, head)
+		res.sendFile('/index.htm');
 		return;
 	}
 
