@@ -127,6 +127,10 @@ app.get('/getVideo', function(req, res) {
 			'Accept-Ranges': 'bytes',
 			'Content-Length': chunksize,
 			'Content-Type': 'video/mp4',
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Credentials': 'true',
+			'Access-Control-Allow-Methods': 'POST, GET, PUT, DELETE, OPTIONS',
+			'Access-Control-Allow-Headers': 'Content-Type'
 		}
 
 		res.writeHead(206, head)
@@ -135,6 +139,10 @@ app.get('/getVideo', function(req, res) {
 		const head = {
 			'Content-Length': fileSize,
 			'Content-Type': 'video/mp4',
+			'Access-Control-Allow-Origin': '*',
+			'Access-Control-Allow-Credentials': 'true',
+			'Access-Control-Allow-Methods': 'POST, GET, PUT, DELETE, OPTIONS',
+			'Access-Control-Allow-Headers': 'Content-Type'
 		}
 		res.writeHead(200, head)
 		fs.createReadStream(path).pipe(res)
@@ -154,7 +162,7 @@ const { Server } = require("socket.io");
 const io = new Server({
 	allowEIO3: true,
 	cors: {
-		credentials: false,
+		credentials: true,
 //		origin: "http://localhost:3000/",
 		origin: "https://tontube.letstip.io",
 		methods: ["GET", "POST"]
