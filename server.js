@@ -155,7 +155,8 @@ const io = new Server({
 	allowEIO3: true,
 	cors: {
 		credentials: false,
-		origin: "http://localhost:3000/",
+//		origin: "http://localhost:3000/",
+		origin: "https://tontube.github.io/",
 		methods: ["GET", "POST"]
 	}
   });
