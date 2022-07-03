@@ -156,7 +156,7 @@ const io = new Server({
 	cors: {
 		credentials: false,
 //		origin: "http://localhost:3000/",
-		origin: "https://tontube.github.io/",
+		origin: "https://tontube.letstip.io/",
 		methods: ["GET", "POST"]
 	}
   });
